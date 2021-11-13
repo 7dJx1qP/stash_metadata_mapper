@@ -4,7 +4,7 @@ from stash_interface import StashInterface
 from mapper import generate_mapping_from_export_zip, generate_mapping_from_directory, generate_mapping_from_export_json, process_mapping
 from log import log
 
-WINDOW_TITLE = 'Stash Manager'
+WINDOW_TITLE = 'Stash Metadata Mapper'
 WINDOW_THEME = 'SystemDefaultForReal'
 DEFAULT_MAPPING_FILENAME = "mapping.yaml"
 
