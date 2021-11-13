@@ -1,0 +1,17 @@
+name: Stash Metadata Mapper
+description: Tasks for mapping metadata of folders containing scenes
+version: 1.0
+url: https://github.com/7dJx1qP
+exec:
+  - python
+  - "{pluginDir}/stash_metadata_mapper.py"
+interface: raw
+tasks:
+  - name: Map directory
+    description: Create and process mapping of a directory
+    defaultArgs:
+      mode: map_directory
+  - name: Map directory (performer only)
+    description: Create and process performer only mapping of a directory
+    defaultArgs:
+      mode: map_simple
