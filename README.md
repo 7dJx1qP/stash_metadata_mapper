@@ -1,4 +1,4 @@
-# Stash Metadata Mapper
+# Stash Metadata Mapper v1.1
 
 A text-file based method of updating stash scene metadata.
 
@@ -8,13 +8,38 @@ Generate YAML files that associate scene files with metadata and then use them t
 
 ## Overview
 
-Suppose you had two files:
+Suppose you had a directory with two files:
 ```
 C:\Videos\Jane Doe - My First Scene (2021.10.11).mp4
 C:\Videos\Jill, Jack - Another Scene (2021.11.08).mp4
 ```
 
-The contents of a mapping file would look like:
+The contents of a blank mapping file generated from this directory looks like:
+```yaml
+C:\Videos\Jane Doe - My First Scene (2021.10.11).mp4:
+  performers:
+  - name: ''
+    url: ''
+  date: ''
+  title: ''
+  url: ''
+C:\Videos\Jill, Jack - Another Scene (2021.11.08).mp4:
+  performers:
+  - name: ''
+    url: ''
+  date: ''
+  title: ''
+  url: ''
+```
+
+Once you fill in the mapping file with the metadata you want, use it to update your stash scenes by running the [process mapping task](#process-mapping-task) with the update stash option, or running from the [command line](#command-line-arguments) with the update stash option. See the [walkthrough section](#walkthrough) below for details.
+
+* All the fields are optional (`name`, `url`, `date`, `title`). You can leave them empty and they will just be ignored when the mapping file is used to update stash.
+
+### Filename parsing
+
+A mapping file can be generated with metadata already filled in by parsing filenames. A mapping file generated with filename parsing enabled looks like:
+
 ```yaml
 C:\Videos\Jane Doe - My First Scene (2021.10.11).mp4:
   performers:
@@ -34,18 +59,27 @@ C:\Videos\Jill, Jack - Another Scene (2021.11.08).mp4:
   url: ''
 ```
 
-Metadata in the initial mapping can be automatically filled in by parsing the filenames.
+### Performers
 
-You can also add performers to the mapping, just follow the name, url pattern:
+#### Adding performers to the mapping
+
+You can also add performers to the mapping, just add more name, url entries. *Note: Correct indentation is important.*
 ```
   - name:
     url:
+  - name:
+    url:
 ```
-Correct indentation is important.
 
-You could then fill in the performer urls yourself, or the mapping can be processed to automatically fill in urls from names if they exist in stash. Performers can also be scraped and created from the mapping file.
+#### Performer URLs from names
 
-Once you've filled in the mapping file with the metadata you want, you can use it to update your stash scenes.
+You can fill in the performer urls yourself, or the mapping process can automatically fill in urls from names if the names exist in stash.
+
+#### Performer creation
+
+The mapping process can create new performers by scraping urls if there's a supported stash scraper for them. If there's no scraper, a new performer with just name and url is created.
+
+#### Simplified performer only mapping file
 
 If you're only interested in mapping performers to files, there is a simplified format:
 ```yaml
@@ -77,9 +111,20 @@ Run `pip install -r requirements.txt` in the `stash_metadata_mapper` folder
 
 ## Plugin
 
-Run the tasks and a GUI window will appear. The options in the GUI correspond to the command line arguments described below
+Run the tasks and a GUI window will appear. The options in the GUI correspond to the script command line arguments described below
+
+### Generate Mapping Task
+
+![image](https://user-images.githubusercontent.com/38586902/141648536-963a1f30-d8b2-4f12-a14c-f7424bd750dc.png)
+
+### Process Mapping Task
+
+![image](https://user-images.githubusercontent.com/38586902/141648568-c2bd81fe-1797-43b8-937a-4944d2956ca4.png)
+
 
 ## Script
+
+The command line script is `cli.py`
 
 ### Command Line Arguments
 
@@ -102,43 +147,43 @@ Run the tasks and a GUI window will appear. The options in the GUI correspond to
 
 1. Generate a mapping file:
 
-  * From a directory of files
+    * From a directory of files
 
-    `py cli.py --directory C:\Videos --parse_filenames --filename_pattern pattern`
+      `py cli.py --directory C:\Videos --parse_filenames --filename_pattern pattern`
 
-    `mapping.yaml` will be created in `C:\Videos`
+      `mapping.yaml` will be created in `C:\Videos`
 
-  * From a stash export zip
+    * From a stash export zip
 
-    `py cli.py --directory C:\export20211112-185658.zip --parse_filenames --filename_pattern pattern`
+      `py cli.py --directory C:\export20211112-185658.zip --parse_filenames --filename_pattern pattern`
 
-    `mapping.yaml` will be created in `C:`
+      `mapping.yaml` will be created in `C:`
 
-  * From a stash export mappings.json
+    * From a stash export mappings.json
 
-    `py cli.py --directory C:\export20211112-185658\mappings.json --parse_filenames --filename_pattern pattern`
+      `py cli.py --directory C:\export20211112-185658\mappings.json --parse_filenames --filename_pattern pattern`
 
-    `mapping.yaml` will be created in `C:\export20211112-185658`
+      `mapping.yaml` will be created in `C:\export20211112-185658`
 
 2. Fill in performer urls in mapping from performer names in mapping:
 
-  `py cli.py --process C:\Videos\mapping.yaml --url_from_name`
+    `py cli.py --process C:\Videos\mapping.yaml --url_from_name`
 
 3. Create missing performers from performer urls:
 
-  `py cli.py --process C:\Videos\mapping.yaml --create_performers`
+    `py cli.py --process C:\Videos\mapping.yaml --create_performers`
 
 4. Review `mapping.yaml` and fill in an missing data or make corrections. You can repeat steps 2 and 3 as needed. Both options can be used at the same time as well:
 
-  `py cli.py --process C:\Videos\mapping.yaml --url_from_name --create_performers`
+    `py cli.py --process C:\Videos\mapping.yaml --url_from_name --create_performers`
 
 5. Update stash scenes according to mapping:
 
-  `py cli.py --process C:\Videos\mapping.yaml --update_stash`
+    `py cli.py --process C:\Videos\mapping.yaml --update_stash`
 
-  * Note: Up to this point, the files in the mapping don't need to have been scanned into stash yet. But you will need to scan your files into stash for `update_stash` to work.
+    * Note: Up to this point, the files in the mapping don't need to have been scanned into stash yet. But you will need to scan your files into stash for `update_stash` to work.
 
-## Notes
+## Additional Fields
 
 * `details` aren't included when generating a full mapping, but you can add them in and they will be processed, i.e.
 ```yaml
@@ -151,7 +196,6 @@ C:\Videos\Jane Doe - My First Scene (2021.10.11).mp4:
   url: ''
   details: This is a description of the scene
 ```
-* All the fields are optional (`name`, `url`, `date`, `title`, `details`). You can leave them empty and they will just be ignored when the mapping file is processed.
 
 ## Parse Patterns
 
