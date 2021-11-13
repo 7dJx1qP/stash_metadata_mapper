@@ -1,7 +1,6 @@
 import sys
 import json
-from gui_map_simple import gui_map_simple
-from gui_map_directory import gui_map_directory
+from mapper_gui import generate_gui, process_gui
 from log import log
 from stash_interface import StashInterface
 
@@ -17,11 +16,11 @@ if __name__ == "__main__":
     try:
         log.LogInfo("mode: {}".format(mode_arg))
 
-        if mode_arg == 'map_simple':
-            gui_map_simple(client)
+        if mode_arg == 'generate':
+            generate_gui()
 
-        elif mode_arg == 'map_directory':
-            gui_map_directory(client)
+        elif mode_arg == 'process':
+            process_gui(client)
 
     except Exception as e:
         log.LogError(str(e))
