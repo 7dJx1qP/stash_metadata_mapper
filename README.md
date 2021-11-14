@@ -93,7 +93,15 @@ C:\Videos\Jill, Jack - Another Scene (2021.11.08).mp4:
   url: ''
 ```
 
+# Requirements
+
+Python 3.6+
+
 # Installation
+
+The mapper can be used as a plugin which launches a GUI window or it can be run as a command line script.
+
+I've tested the plugin on Windows. Linux and Mac compatability is unknown. If you're using stash on Docker or the plugin doesn't work, just use the command line script.
 
 ## Plugin
 
@@ -144,6 +152,8 @@ The command line script is `cli.py`
 * `--no_update_mapfile` Don't modify the input mapping file. Processing a mapping file may modify it, i.e. the `url_from_name` option fills in the mapping performer urls based on performer names. Use no_update_mapfile to prevent the mapping file from being updated.
 
 ### Walkthrough
+
+*Note: you may need to replace py with python or python3 when you run commands, depending on your setup*
 
 1. Generate a mapping file:
 
