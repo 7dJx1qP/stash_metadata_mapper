@@ -61,9 +61,6 @@ if __name__ == '__main__':
     if args.process:
         api_key = args.api_key or config.api_key
         server_url = args.server_url or config.server_url
-        if not api_key:
-            log.LogError("missing stash api key")
-            sys.exit(1)
         if not server_url:
             log.LogError("missing stash url")
             sys.exit(1)
