@@ -2,9 +2,10 @@ import argparse
 import config
 import os
 import sys
-from log import log, LogLevel
+from stashlib.logger import logger as log, LogLevel
+from stashlib.stash_database import StashDatabase
+from stashlib.stash_interface import StashInterface
 from mapper import generate_mapping_from_directory, generate_mapping_from_export_zip, generate_mapping_from_export_json, process_mapping
-from stash_interface import StashInterface
 
 def dir_path(path):
     if os.path.isdir(path):
@@ -25,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, help='output yaml file')
     parser.add_argument('--input_zip', type=file_path, help='stash export zip file of stash scenes to generate a yaml mapping file from')
     parser.add_argument('--input_json', type=file_path, help='stash mappings.json of stash scenes to generate a yaml mapping file from')
+    parser.add_argument('--db_path', type=file_path, help="path to stash database")
     parser.add_argument('--api_key', type=str, help="stash api key")
     parser.add_argument('--server_url', type=str, help="stash server url")
     parser.add_argument('--performer_only', type=str, help='simplified mapping of performers names and urls only')
@@ -59,12 +61,27 @@ if __name__ == '__main__':
         generate_mapping_from_export_json(args.input_json, mapfile, args.performer_only, args.parse_filenames, args.filename_pattern)
 
     if args.process:
+        db_path = args.db_path or config.db_path
         api_key = args.api_key or config.api_key
         server_url = args.server_url or config.server_url
+
+        if not db_path:
+            log.LogError("missing stash database path")
+            sys.exit(1)
         if not server_url:
             log.LogError("missing stash url")
             sys.exit(1)
+
         client = StashInterface(None, api_key=api_key, server_url=server_url)
+
+        try:
+            db = StashDatabase(db_path)
+        except Exception as e:
+            log.LogError(str(e))
+            sys.exit(0)
+
         outfile = args.output or args.process
         update_mapfile = not args.no_update_mapfile
-        process_mapping(client, args.process, outfile, url_from_name=args.url_from_name, create_performers=args.create_performers, update_mapfile=update_mapfile, update_stash=args.update_stash)
+        process_mapping(client, db, args.process, outfile, url_from_name=args.url_from_name, create_performers=args.create_performers, update_mapfile=update_mapfile, update_stash=args.update_stash)
+
+        db.close()

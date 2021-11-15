@@ -1,4 +1,4 @@
-# Stash Metadata Mapper v1.1
+# Stash Metadata Mapper v1.2
 
 A text-file based method of updating stash scene metadata.
 
@@ -107,11 +107,13 @@ I've tested the plugin on Windows. Linux and Mac compatability is unknown. If yo
 
 Place the `stash_metadata_mapper` folder in your stash `plugins` folder
 
+Fill in `config.py` with the path to your stash database file (by default `stash-go.sqlite`)
+
 Run `pip install -r requirements.txt` in the `stash_metadata_mapper` folder
 
 ## Script
 
-Fill in `config.py` with your stash api key and stash url
+Fill in `config.py` with the **absolute** path to your stash database file (by default it should be something like `/path/to/stash/root/stash-go.sqlite`), stash api key, and stash url
 
 Run `pip install -r requirements.txt` in the `stash_metadata_mapper` folder
 

@@ -1,8 +1,9 @@
 import os
 import PySimpleGUI as sg
-from stash_interface import StashInterface
+from stashlib.logger import logger as log
+from stashlib.stash_database import StashDatabase
+from stashlib.stash_interface import StashInterface
 from mapper import generate_mapping_from_export_zip, generate_mapping_from_directory, generate_mapping_from_export_json, process_mapping
-from log import log
 
 WINDOW_TITLE = 'Stash Metadata Mapper'
 WINDOW_THEME = 'SystemDefaultForReal'
@@ -71,7 +72,7 @@ def generate_gui():
         except Exception as e:
             log.LogError(e)
 
-def process_gui(client: StashInterface):
+def process_gui(client: StashInterface, db: StashDatabase):
     sg.theme(WINDOW_THEME)
 
     layout = [[sg.Text("Process mapping")],
@@ -109,7 +110,7 @@ def process_gui(client: StashInterface):
 
         try:
             ## Create and process mapping of scenes in a site directory
-            process_mapping(client, mapfile, mapfile, url_from_name=url_from_name, create_performers=create_performers, update_mapfile=update_mapfile, update_stash=update_stash)
+            process_mapping(client, db, mapfile, mapfile, url_from_name=url_from_name, create_performers=create_performers, update_mapfile=update_mapfile, update_stash=update_stash)
             log.LogInfo(f"processed mapping {mapfile}")
             break
 

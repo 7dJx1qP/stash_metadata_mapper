@@ -1,6 +1,6 @@
 name: Stash Metadata Mapper
 description: Tasks for mapping metadata of folders containing scenes
-version: 1.1
+version: 1.2
 url: https://github.com/7dJx1qP/stash_metadata_mapper
 exec:
   - python

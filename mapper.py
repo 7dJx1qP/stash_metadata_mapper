@@ -1,11 +1,12 @@
 import json
 import os
-from log import log
 import re
 import zipfile
-from common import load_yaml, save_yaml
-from scene_filename_parser import parse_filename
-from stash_interface import StashInterface
+from stashlib.common import load_yaml, save_yaml
+from stashlib.logger import logger as log
+from stashlib.stash_database import StashDatabase
+from stashlib.scene_filename_parser import parse_filename
+from stashlib.stash_interface import StashInterface
 
 """Functions for creating mapping files, creating performers, and updating stash scenes
 """
@@ -118,7 +119,7 @@ def get_scene_from_filepath(client: StashInterface, filepath):
         return scenes[0]
     return None
 
-def process_mapping(client: StashInterface, mapfile, outfile, url_from_name=False, create_performers=True, update_mapfile=True, update_stash=False):
+def process_mapping(client: StashInterface, db: StashDatabase, mapfile, outfile, url_from_name=False, create_performers=True, update_mapfile=True, update_stash=False):
     mapping = load_yaml(mapfile)
 
     for filepath, mapdata in mapping.items():
@@ -129,22 +130,17 @@ def process_mapping(client: StashInterface, mapfile, outfile, url_from_name=Fals
         else:
             performers = mapdata['performers']
 
-        scene = get_scene_from_filepath(client, filepath)
-        if scene and update_stash:
-            scene_data = {
-                "id": scene["id"],
-            }
-            if not performer_only:
-                if mapdata['title']:
-                    scene_data['title'] = mapdata['title']
-                if mapdata['date']:
-                    scene_data['date'] = mapdata['date']
-                if mapdata['url']:
-                    scene_data['url'] = mapdata['url']
-                if 'details' in mapdata and mapdata['details']:
-                    scene_data['details'] = mapdata['details']
-                if len(scene_data.keys()) > 1:
-                    client.updateScene(scene_data)
+        scene = db.scenes.selectone_path(filepath)
+        if scene and not performer_only and update_stash:
+            if mapdata['title']:
+                db.scenes.update_title_by_id(scene.id, mapdata['title'], False)
+            if mapdata['date']:
+                db.scenes.update_date_by_id(scene.id, mapdata['date'], False)
+            if mapdata['url']:
+                db.scenes.update_url_by_id(scene.id, mapdata['url'], False)
+            if 'details' in mapdata and mapdata['details']:
+                db.scenes.update_details_by_id(scene.id, mapdata['details'], False)
+            db.commit()
 
         for actor in performers:
             name = actor['name']
@@ -155,12 +151,12 @@ def process_mapping(client: StashInterface, mapfile, outfile, url_from_name=Fals
             # if only name and no url, try to find url from name
             if name and not url:
                 if url_from_name:
-                    performer = client.findPerformerByName(name)
+                    performer = db.query_performer_name(name)
                     if performer:
-                        actor['url'] = performer.get("url")
+                        actor['url'] = performer.url
             # if only url and no name, try to find name from url
             elif url:
-                performer = client.findPerformerByURL(url)
+                performer = db.performers.selectone_url(url)
                 # try to create performer if url not found
                 if not performer:
                     if create_performers:
@@ -173,17 +169,13 @@ def process_mapping(client: StashInterface, mapfile, outfile, url_from_name=Fals
                         else:
                             log.LogWarning(f'failed to create performer {url}')
                 else:
-                    performer_id = performer.get("id")
-                    actor['name'] = performer.get("name")
+                    performer_id = performer.id
+                    actor['name'] = performer.name
 
             if scene and performer_id and update_stash:
-                performer_ids = [x["id"] for x in scene["performers"]]
-                if performer_id not in performer_ids:
-                    performer_ids.append(performer_id)
-                client.updateScene({
-                    "id": scene["id"],
-                    "performer_ids": performer_ids
-                })
+                performer = db.performers.selectone_id(performer_id)
+                if performer:
+                    db.add_performers_to_scene(scene, [performer])
 
             log.LogDebug(f'\t{name} {url}')
 
