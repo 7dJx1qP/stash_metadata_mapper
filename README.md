@@ -101,7 +101,7 @@ Python 3.6+
 
 The mapper can be used as a plugin which launches a GUI window or it can be run as a command line script.
 
-I've tested the plugin on Windows. Linux and Mac compatability is unknown. If you're using stash on Docker or the plugin doesn't work, just use the command line script.
+I've tested the plugin on Windows. Linux and Mac compatibility is unknown. If you're using stash on Docker or the plugin doesn't work, just use the command line script.
 
 ## Plugin
 
