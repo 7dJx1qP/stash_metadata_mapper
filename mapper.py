@@ -21,6 +21,7 @@ performer_fields = ["name", "url", "gender", "birthdate", "ethnicity",
 
 def create_performer_from_url(client: StashInterface, url, name=None):
     scraped_data = client.scrapePerformerURL(url)
+    log.LogDebug(f"scraped performer: {url} {name}")
     if scraped_data:
         if scraped_data["images"]:
             scraped_data["image"] = scraped_data["images"][0]
@@ -30,6 +31,10 @@ def create_performer_from_url(client: StashInterface, url, name=None):
         scraped_data["gender"] = scraped_data["gender"].upper()
         if name:
             scraped_data["name"] = name
+        if scraped_data['birthdate'] and not re.match(r'\d\d\d\d\-\d\d\-\d\d', scraped_data['birthdate']):
+            del scraped_data['birthdate']
+        if scraped_data['death_date'] and not re.match(r'\d\d\d\d\-\d\d\-\d\d', scraped_data['death_date']):
+            del scraped_data['death_date']
     elif name:
         scraped_data = {
             "name": name,
@@ -38,6 +43,7 @@ def create_performer_from_url(client: StashInterface, url, name=None):
     else:
         log.LogError(f"no scrape data: {url} and no name")
         return None, None
+    log.LogDebug(f"creating performer: {url} {name}")
     performer_id = client.createPerformer(scraped_data)
     log.LogInfo(f"created performer id {performer_id}")
     return performer_id, scraped_data

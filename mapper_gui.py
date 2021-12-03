@@ -70,7 +70,7 @@ def generate_gui():
             break
 
         except Exception as e:
-            log.LogError(e)
+            log.LogError(str(e))
 
 def process_gui(client: StashInterface, db: StashDatabase):
     sg.theme(WINDOW_THEME)
@@ -105,8 +105,14 @@ def process_gui(client: StashInterface, db: StashDatabase):
             log.LogError(f'no mapping file entered')
             continue
         if not os.path.isfile(mapfile):
-            log.LogError(f'invalid file: {mapfile}')
-            continue
+            if os.path.isdir(mapfile):
+                mapfile = os.path.join(mapfile, 'mapping.yaml')
+                if not os.path.isfile(mapfile):
+                    log.LogError(f'invalid file: {mapfile}')
+                    continue
+            else:
+                log.LogError(f'invalid file: {mapfile}')
+                continue
 
         try:
             ## Create and process mapping of scenes in a site directory
@@ -115,4 +121,4 @@ def process_gui(client: StashInterface, db: StashDatabase):
             break
 
         except Exception as e:
-            log.LogError(e)
+            log.LogError(str(e))

@@ -1,4 +1,4 @@
-# Stash Metadata Mapper v1.2
+# Stash Metadata Mapper v1.3
 
 A text-file based method of updating stash scene metadata.
 
