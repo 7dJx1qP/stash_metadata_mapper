@@ -2,7 +2,7 @@ import json
 import os
 import re
 import zipfile
-from stashlib.common import load_yaml, save_yaml
+from stashlib.common import load_yaml, save_yaml, get_timestamp
 from stashlib.logger import logger as log
 from stashlib.stash_database import StashDatabase
 from stashlib.scene_filename_parser import parse_filename
@@ -146,7 +146,19 @@ def process_mapping(client: StashInterface, db: StashDatabase, mapfile, outfile,
                 db.scenes.update_url_by_id(scene.id, mapdata['url'], False)
             if 'details' in mapdata and mapdata['details']:
                 db.scenes.update_details_by_id(scene.id, mapdata['details'], False)
+            if 'studio' in mapdata and mapdata['studio']:
+                studio = db.studios.selectone_name(mapdata['studio'])
+                if studio:
+                    db.scenes.update_studio_id_by_id(scene.id, studio.id, False)
             db.commit()
+            if 'tags' in mapdata and mapdata['tags']:
+                for tag_name in mapdata['tags']:
+                    tag = db.tags.selectone_name(tag_name)
+                    if not tag:
+                        db.tags.insert(tag_name, get_timestamp(), get_timestamp(), commit=True)
+                        tag = db.tags.selectone_name(tag_name)
+                    if tag:
+                        db.add_tag_to_scene(scene, tag, commit=True)
 
         for actor in performers:
             name = actor['name']
