@@ -35,6 +35,8 @@ def create_performer_from_url(client: StashInterface, url, name=None):
             del scraped_data['birthdate']
         if scraped_data['death_date'] and not re.match(r'\d\d\d\d\-\d\d\-\d\d', scraped_data['death_date']):
             del scraped_data['death_date']
+        del scraped_data['aliases']
+        del scraped_data['height']
     elif name:
         scraped_data = {
             "name": name,
@@ -48,19 +50,26 @@ def create_performer_from_url(client: StashInterface, url, name=None):
     log.LogInfo(f"created performer id {performer_id}")
     return performer_id, scraped_data
 
-def generate_mapping_from_export_json(jsonfile, outfile, performer_only, parse_filenames, filename_pattern=None):
+def generate_mapping_from_export_dir(exportdir, outfile, performer_only, parse_filenames, filename_pattern=None):
     try:
-        mapping = json.load(open(jsonfile, encoding='utf-8'))
-        filepaths = [scene['path'] for scene in mapping['scenes']]
+        filepaths = []
+        scenesdir = os.path.join(exportdir, 'scenes')
+        for file in os.listdir(scenesdir):
+            scenejsonfile = os.path.join(scenesdir, file)
+            mapping = json.load(open(scenejsonfile, encoding='utf-8'))
+            filepaths.append(mapping['files'][0])
     except:
-        raise Exception(f"error loading {jsonfile}")
+        raise Exception(f"error processing {exportdir}")
     generate_mapping(filepaths, outfile, performer_only, parse_filenames, filename_pattern)
 
 def generate_mapping_from_export_zip(exportfile, outfile, performer_only, parse_filenames, filename_pattern=None):
     try:
+        filepaths = []
         archive = zipfile.ZipFile(exportfile, 'r')
-        mapping = json.loads(archive.read('mappings.json'))
-        filepaths = [scene['path'] for scene in mapping['scenes']]
+        for name in archive.namelist():
+            if name.startswith('scenes/'):
+                mapping = json.loads(archive.read(name))
+                filepaths.append(mapping['files'][0])
     except:
         raise Exception("error reading mapping.json from export file")
     generate_mapping(filepaths, outfile, performer_only, parse_filenames, filename_pattern)
@@ -103,12 +112,14 @@ def generate_mapping(filepaths, outfile, performer_only, parse_filenames, filena
                     for performer in performers:
                         mapping_performers.append({
                         'name': performer,
+                        'disambiguation': '',
                         'url': ''
                     })
 
         if not mapping_performers:
             mapping_performers.append({
                 'name': '',
+                'disambiguation': '',
                 'url': ''
             })
 
@@ -136,66 +147,65 @@ def process_mapping(client: StashInterface, db: StashDatabase, mapfile, outfile,
         else:
             performers = mapdata['performers']
 
-        scene = db.scenes.selectone_path(filepath)
-        if scene and not performer_only and update_stash:
-            if mapdata['title']:
-                db.scenes.update_title_by_id(scene.id, mapdata['title'], False)
-            if mapdata['date']:
-                db.scenes.update_date_by_id(scene.id, mapdata['date'], False)
-            if mapdata['url']:
-                db.scenes.update_url_by_id(scene.id, mapdata['url'], False)
-            if 'details' in mapdata and mapdata['details']:
-                db.scenes.update_details_by_id(scene.id, mapdata['details'], False)
-            if 'studio' in mapdata and mapdata['studio']:
-                studio = db.studios.selectone_name(mapdata['studio'])
-                if studio:
-                    db.scenes.update_studio_id_by_id(scene.id, studio.id, False)
-            db.commit()
-            if 'tags' in mapdata and mapdata['tags']:
-                for tag_name in mapdata['tags']:
-                    tag = db.tags.selectone_name(tag_name)
-                    if not tag:
-                        db.tags.insert(tag_name, get_timestamp(), get_timestamp(), commit=True)
+        scenes = db.get_scenes_from_filepath(filepath)
+        for scene in scenes:
+            if not performer_only and update_stash:
+                if mapdata['title']:
+                    db.scenes.update_title_by_id(scene.id, mapdata['title'], False)
+                if mapdata['date']:
+                    db.scenes.update_date_by_id(scene.id, mapdata['date'], False)
+                if 'details' in mapdata and mapdata['details']:
+                    db.scenes.update_details_by_id(scene.id, mapdata['details'], False)
+                if 'studio' in mapdata and mapdata['studio']:
+                    studio = db.studios.selectone_name(mapdata['studio'])
+                    if studio:
+                        db.scenes.update_studio_id_by_id(scene.id, studio.id, False)
+                db.commit()
+                if 'tags' in mapdata and mapdata['tags']:
+                    for tag_name in mapdata['tags']:
                         tag = db.tags.selectone_name(tag_name)
-                    if tag:
-                        db.add_tag_to_scene(scene, tag, commit=True)
+                        if not tag:
+                            db.tags.insert(tag_name, get_timestamp(), get_timestamp(), commit=True)
+                            tag = db.tags.selectone_name(tag_name)
+                        if tag:
+                            db.add_tag_to_scene(scene, tag, commit=True)
 
-        for actor in performers:
-            name = actor['name']
-            url = actor['url']
-            performer = None
-            performer_id = None
+            for actor in performers:
+                name = actor['name']
+                url = actor['url']
+                performer = None
+                performer_id = None
 
-            # if only name and no url, try to find url from name
-            if name and not url:
-                if url_from_name:
-                    performer = db.query_performer_name(name)
+                # if only name and no url, try to find url from name
+                if name and not url:
+                    if url_from_name:
+                        performer = db.query_performer_name(name)
+                        if performer:
+                            actor['url'] = performer.url
+                # if only url and no name, try to find name from url
+                elif url:
+                    performer = db.performers.selectone_url(url)
+                    # try to create performer if url not found
+                    if not performer:
+                        if create_performers:
+                            log.LogDebug(f'creating missing performer {url}')
+                            performer_id, scraped_data = create_performer_from_url(client, url, name)
+                            # get name from performer if create successful
+                            if performer_id:
+                                actor['name'] = scraped_data["name"]
+                                log.LogInfo(f"created performer {actor['name']}")
+                            else:
+                                log.LogWarning(f'failed to create performer {url}')
+                    else:
+                        performer_id = performer.id
+                        actor['name'] = performer.name
+
+                if scene and performer_id and update_stash:
+                    performer = db.performers.selectone_id(performer_id)
                     if performer:
-                        actor['url'] = performer.url
-            # if only url and no name, try to find name from url
-            elif url:
-                performer = db.performers.selectone_url(url)
-                # try to create performer if url not found
-                if not performer:
-                    if create_performers:
-                        log.LogDebug(f'creating missing performer {url}')
-                        performer_id, scraped_data = create_performer_from_url(client, url, name)
-                        # get name from performer if create successful
-                        if performer_id:
-                            actor['name'] = scraped_data["name"]
-                            log.LogInfo(f"created performer {actor['name']}")
-                        else:
-                            log.LogWarning(f'failed to create performer {url}')
-                else:
-                    performer_id = performer.id
-                    actor['name'] = performer.name
+                        db.add_performers_to_scene(scene, [performer])
 
-            if scene and performer_id and update_stash:
-                performer = db.performers.selectone_id(performer_id)
-                if performer:
-                    db.add_performers_to_scene(scene, [performer])
-
-            log.LogDebug(f'\t{name} {url}')
+                log.LogDebug(f'\t{name} {url}')
 
     if update_mapfile:
         save_yaml(outfile, mapping)
@@ -233,6 +243,7 @@ def map_directory_performers(client: StashInterface, rootdir):
         if dirpath not in mapping:
             mapping[dirpath] = [{
                 'name': dirname,
+                'disambiguation': '',
                 'url': ''
             }]
         else:

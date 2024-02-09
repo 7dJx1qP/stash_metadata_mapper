@@ -16,7 +16,7 @@ if __name__ == "__main__":
     client = StashInterface(json_input["server_connection"])
 
     try:
-        db = StashDatabase(config.db_path)
+        db = StashDatabase(config.db_path, None, None)
     except Exception as e:
         log.LogError(str(e))
         sys.exit(0)

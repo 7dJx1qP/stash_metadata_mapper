@@ -3,7 +3,7 @@ import PySimpleGUI as sg
 from stashlib.logger import logger as log
 from stashlib.stash_database import StashDatabase
 from stashlib.stash_interface import StashInterface
-from mapper import generate_mapping_from_export_zip, generate_mapping_from_directory, generate_mapping_from_export_json, process_mapping
+from mapper import generate_mapping_from_export_zip, generate_mapping_from_directory, generate_mapping_from_export_dir, process_mapping
 
 WINDOW_TITLE = 'Stash Metadata Mapper'
 WINDOW_THEME = 'SystemDefaultForReal'
@@ -64,8 +64,8 @@ def generate_gui():
                 generate_mapping_from_directory(dirpath, outfile, performer_only, parse_filenames, filename_pattern=filename_pattern)
             elif exportfile and exportfile.endswith(".zip"):
                 generate_mapping_from_export_zip(exportfile, outfile, performer_only, parse_filenames, filename_pattern=filename_pattern)
-            elif exportfile and exportfile.endswith(".json"):
-                generate_mapping_from_export_json(exportfile, outfile, performer_only, parse_filenames, filename_pattern=filename_pattern)
+            elif exportfile and os.path.isdir(exportfile):
+                generate_mapping_from_export_dir(exportfile, outfile, performer_only, parse_filenames, filename_pattern=filename_pattern)
             log.LogInfo(f"generated mapping {outfile}")
             break
 
